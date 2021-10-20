@@ -1,0 +1,332 @@
+#ifndef _FLAG_ALGOTESTER
+#define _FLAG_ALGOTESTER 1
+#ifndef _ENABLE_DEBUGGING_LITE
+#define _ENABLE_DEBUGGING_LITE 1
+#endif 
+#ifndef _ALLOCATED_MEMORY_CHECK
+#define _ALLOCATED_MEMORY_CHECK 1
+#endif
+#include <iostream>
+#include <C:\Headers\arrand>
+typedef struct _failed_arrays
+{
+    int *_original_array;
+    int *_sorted_array;
+    int _sizeof_array;
+} fa;
+int _option_scan_yes_no_col (char *message)//yes ('y' or 'Y') returns 1 and no ('n' or 'N') returns 0;
+{
+    char trigger;
+    st_y_n:;
+    printf ("%s", message);
+    int ret = scanf ("%c", &trigger);
+    scanf ("%*c");
+    printf ("\033[m");
+    if (ret != 1)
+    {
+        printf ("\033[1mscan \033[31merror\033[36m:- \033[30menter a valid character\033[m \n");
+        fflush (stdin);
+        goto st_y_n;
+    }
+    else
+    {
+        if ((trigger != 'y') && (trigger != 'n') && (trigger != 'Y') && (trigger != 'N'))
+        {
+            printf ("\033[1moption \033[31merror\033[36m:- \033[30menter a valid option\033[m \n");
+            fflush (stdin);
+            goto st_y_n;
+        }
+        else 
+        {
+            fflush (stdin);
+            if ((trigger == 'y') || (trigger == 'Y'))
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+}
+int _Sorting_Algo_Test (int (&_sorting_function) (int *arrayptr, int n), int _max_array_size = 100, int _num_of_loops = 100)
+{
+    #if _ENABLE_DEBUGGING_LITE == 1
+    printf ("called function-> _sorting_algo_test (int (&_sorting_function) (int *, int), int): \n");
+    printf ("\'_max_array_size\': %d \n", _max_array_size);
+    printf ("\'_num_of_loops\': %d \n", _num_of_loops);
+    #endif
+_start:
+    int _ret_value; // not yet used ->>
+    fa **failedarrs = NULL;
+    int _flag_error = 0; // 0  means no error;
+    int _total_num_of_failed_cases = 0;
+    for (int loop = 0; loop < _num_of_loops; loop++, _flag_error = 0)
+    {
+        for (int i = 1; i <= _max_array_size; i++, _flag_error = 0)
+        {
+            // std::cout << "flag1->" << std::endl;
+            int *arrptr = _gen_random_unique_int_array_with_maxval (i, i - 1);
+            // std::cout << "flag2" << std::endl;
+            int *_arrptr_copy = (int *) (malloc (sizeof (int) * i));
+            #if _ALLOCATED_MEMORY_CHECK == 1
+            if (_arrptr_copy == NULL)
+            {
+                printf ("memory allocation error: malloc returned null! \n");
+            }
+            #endif
+            // std::cout << "flag3" << std::endl;
+            for (int j = 0; j <= i; j++)
+            {
+                _arrptr_copy[j] = arrptr[j];
+            }
+            _ret_value = _sorting_function (arrptr, i);
+            // now arrptr is a sorted array ->
+            for (int j = 0; j < i; j++) // checking if the sorted array is right
+            {
+                if (arrptr[j] != j)
+                {
+                    _flag_error = 1;
+                    break;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            if (_flag_error == 0)
+            {
+                free (arrptr);
+                free (_arrptr_copy);
+            }
+            else
+            {
+                // printf ("test failed (%d)! \n", i);
+                _total_num_of_failed_cases++;
+                // _mem_reallocation:
+                failedarrs = (fa **) (realloc (failedarrs, (sizeof (fa *)) * _total_num_of_failed_cases));
+                #if _ALLOCATED_MEMORY_CHECK == 1
+                if (failedarrs == NULL)
+                {
+                    printf ("memory reallocation error: realloc returned null! \n");
+                }
+                // else 
+                // {
+                //     // printf ("realloc return: 0x%x \n", failedarrs);
+                // }
+                #endif
+                fa *_strucure_ptr;
+                // _mem_allocation:
+                _strucure_ptr = (fa *) (malloc (sizeof (fa)));
+                #if _ALLOCATED_MEMORY_CHECK == 1
+                if (_strucure_ptr == NULL)
+                {
+                    printf ("memory allocation error: malloc returned null! \n");
+                    // goto _mem_allocation;
+                }
+                // else 
+                // {
+                //     printf ("malloc return: 0x%x \n", _strucure_ptr);
+                // }
+                #endif
+                failedarrs[_total_num_of_failed_cases - 1] = _strucure_ptr;
+                _strucure_ptr->_original_array = _arrptr_copy;
+                _strucure_ptr->_sorted_array = arrptr;
+                _strucure_ptr->_sizeof_array = i;
+            }
+        }
+        // std::cout << "loop " << loop << " completed!" << std::endl;
+    }
+    printf ("total number of test cases: %d \n", _num_of_loops * _max_array_size);
+    printf ("failed: %d \n", _total_num_of_failed_cases);
+    int ret = -1;
+    char string[] = "Would you like to view the failed cases? (y/n) ";
+    if (_total_num_of_failed_cases > 0)
+    {
+        goto _failed_cases;
+    }
+    else
+    {
+        goto _end;
+    }
+    _failed_cases:;
+    ret = _option_scan_yes_no_col (string);
+    if (ret == 1)
+    {
+        FILE *fileptr = fopen ("_failed_testcase_dumpfile.txt", "w");
+        for (int i = 0; i < _total_num_of_failed_cases; i++)
+        {
+            fprintf (fileptr, "Case %d (size of array: %d) \n", i + 1, failedarrs[i]->_sizeof_array);
+            fprintf (fileptr, "> Input array: ");
+            for (int j = 0; j < failedarrs[i]->_sizeof_array; j++)
+            {
+                if (j != (failedarrs[i]->_sizeof_array - 1))
+                    fprintf (fileptr, "%d, ", failedarrs[i]->_original_array[j]);
+                else    
+                    fprintf (fileptr, "%d \n", failedarrs[i]->_original_array[j]);
+            }
+            fprintf (fileptr, "> Output array: ");
+            for (int j = 0; j < failedarrs[i]->_sizeof_array; j++)
+            {
+                if (j != (failedarrs[i]->_sizeof_array - 1))
+                    fprintf (fileptr, "%d, ", failedarrs[i]->_sorted_array[j]);
+                else    
+                    fprintf (fileptr, "%d \n", failedarrs[i]->_sorted_array[j]);
+            }
+        }
+        printf ("failed cases dumped into file \'_failed_testcase_dumpfile.txt\' \n");
+    }
+    else
+    {
+        // do nothing
+    }
+_end:;
+    // freeing heap memory
+    #if _ALLOCATED_MEMORY_CHECK == 1
+    if (_total_num_of_failed_cases > 0)
+        printf ("freeing failed case arrays! \n");
+    #endif
+    for (int i = 0; i < _total_num_of_failed_cases; i++)
+    {
+        free (failedarrs[i]->_original_array);
+        free (failedarrs[i]->_sorted_array);
+    }
+    free (failedarrs);
+    #if _ENABLE_DEBUGGING_LITE == 1
+    printf ("exiting function-> _sorting_algo_test (int (&_sorting_function) (int *, int), int): \n");
+    printf ("\'_total_num_of_failed_cases\': %d \n", _total_num_of_failed_cases);
+    #endif
+    return _total_num_of_failed_cases;
+}
+// int _sorting_algo_test (int (&_sorting_function) (int *arrayptr, int n))
+// {
+//     int _ret_value; // not yet used ->
+//     fa **failedarrs = NULL;
+//     int _flag_error = 0; // 0  means no error;
+//     int _total_num_of_failed_cases = 0;
+//     for (int loop = 0; loop < 100; loop++, _flag_error = 0)
+//     {
+//         for (int i = 1; i <= 100; i++, _flag_error = 0)
+//         {
+//             // std::cout << "flag1->" << std::endl;
+//             int *arrptr = _gen_random_unique_int_array_with_maxval (i, i - 1);
+//             // std::cout << "flag2" << std::endl;
+//             int *_arrptr_copy = (int *) (malloc (sizeof (int) * i));
+//             if (_arrptr_copy == NULL)
+//             {
+//                 std::cout << "malloc returned null!" << std::endl;
+//             }
+//             // std::cout << "flag3" << std::endl;
+//             for (int j = 0; j <= i; j++)
+//             {
+//                 _arrptr_copy[j] = arrptr[j];
+//             }
+//             _ret_value = _sorting_function (arrptr, i); 
+//             // now arrptr is a sorted array ->
+//             for (int j = 0; j < i; j++) // checking if the sorted array is right
+//             {
+//                 if (arrptr[j] != j)
+//                 {
+//                     _flag_error = 1;
+//                     break;
+//                 }
+//                 else
+//                 {
+//                     continue;
+//                 }
+//             }
+//             if (_flag_error == 0)
+//             {
+//                 free (arrptr);
+//                 free (_arrptr_copy);
+//             }
+//             else
+//             {
+//                 // printf ("test failed (%d)! \n", i);
+//                 _total_num_of_failed_cases++;
+//                 _mem_reallocation:
+//                 failedarrs = (fa **) (realloc (failedarrs, (sizeof (fa *)) * _total_num_of_failed_cases));
+//                 if (failedarrs == NULL)
+//                 {
+//                     printf ("realloc error: null pointer returned by realloc, trying again! \n");
+//                     goto _mem_reallocation;
+//                 }
+//                 else 
+//                 {
+//                     // printf ("realloc return: 0x%x \n", failedarrs);
+//                 }
+//                 fa *_strucure_ptr;
+//                 _mem_allocation:
+//                 _strucure_ptr = (fa *) (malloc (sizeof (fa)));
+//                 if (_strucure_ptr == NULL)
+//                 {
+//                     printf ("malloc error: null pointer returned by malloc, trying again! \n");
+//                     goto _mem_allocation;
+//                 }
+//                 else 
+//                 {
+//                     printf ("malloc return: 0x%x \n", _strucure_ptr);
+//                 }
+//                 failedarrs[_total_num_of_failed_cases - 1] = _strucure_ptr;
+//                 _strucure_ptr->_original_array = _arrptr_copy;
+//                 _strucure_ptr->_sorted_array = arrptr;
+//                 _strucure_ptr->_sizeof_array = i;
+//             }
+//         }
+//         // std::cout << "loop " << loop << " completed!" << std::endl;
+//     }
+//     printf ("total number of test cases: 10000 \n");
+//     printf ("failed: %d \n", _total_num_of_failed_cases);
+//     int ret = -1;
+//     char string[] = "Would you like to view the failed cases? (y/n) ";
+//     if (_total_num_of_failed_cases > 0)
+//     {
+//         goto _view_cases;
+//     }
+//     else
+//     {
+//         goto _end;
+//     }
+// _view_cases:;
+//     ret = _option_scan_yes_no_col (string);
+//     if (ret == 1)
+//     {
+//         FILE *fileptr = fopen ("_testcase_dumpfile.txt", "w");
+//         for (int i = 0; i < _total_num_of_failed_cases; i++)
+//         {
+//             fprintf (fileptr, "case %d: (sizeof array = %d) \n", i + 1, failedarrs[i]->_sizeof_array);
+//             fprintf (fileptr, "->input array: ");
+//             for (int j = 0; j < failedarrs[i]->_sizeof_array; j++)
+//             {
+//                 if (j != (failedarrs[i]->_sizeof_array - 1))
+//                     fprintf (fileptr, "%d, ", failedarrs[i]->_original_array[j]);
+//                 else    
+//                     fprintf (fileptr, "%d \n", failedarrs[i]->_original_array[j]);
+//             }
+//             fprintf (fileptr, "->output array: ");
+//             for (int j = 0; j < failedarrs[i]->_sizeof_array; j++)
+//             {
+//                 if (j != (failedarrs[i]->_sizeof_array - 1))
+//                     fprintf (fileptr, "%d, ", failedarrs[i]->_sorted_array[j]);
+//                 else    
+//                     fprintf (fileptr, "%d \n", failedarrs[i]->_sorted_array[j]);
+//             }
+//         }
+//         printf ("failed cases dumped into file \'_testcase_dumpfile.txt\' \n");
+//     }
+//     else
+//     {
+//         // do nothing
+//     }
+// _end:;
+//     // freeing heap memory
+//     for (int i = 0; i < _total_num_of_failed_cases; i++)
+//     {
+//         free (failedarrs[i]->_original_array);
+//         free (failedarrs[i]->_sorted_array);
+//     }
+//     free (failedarrs);
+//     return _total_num_of_failed_cases;
+// }
+#endif

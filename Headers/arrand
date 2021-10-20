@@ -1,0 +1,153 @@
+#ifndef _FLAG_ARRAND
+#define _FLAG_ARRAND 1
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <climits>
+#include <cerrno>
+#ifndef _ENABLE_DEBUGGING_LITE
+#define _ENABLE_DEBUGGING_LITE 0
+#endif
+#ifndef _ENABLE_ERROR_DETECTION
+#define _ENABLE_ERROR_DETECTION 0
+#endif
+#ifndef _ENABLE_ERROR_MESSAGES
+#define _ENABLE_ERROR_MESSAGES 0
+#endif
+#ifndef _SHOW_NUMBER_OF_FAILED_ATTEMPTS // displays the number of failed attempts taken by rand ();
+#define _SHOW_NUMBER_OF_FAILED_ATTEMPTS 0
+#endif
+#ifndef _ALLOCATED_MEMORY_CHECK // checks is malloc, calloc and realloc is working fine;
+#define _ALLOCATED_MEMORY_CHECK 1  
+#endif
+// int *_gen_random_int_array (int _num_of_elements, int maxval) 
+// {
+//     #if _ENABLE_DEBUGGING_LITE == 1
+//     printf ("called function-> _gen_random_int_array (int): \n");
+//     printf ("\'_num_of_elements\': %d \n", _num_of_elements);
+//     #endif
+//     #if _ENABLE_ERROR_DETECTION == 1
+//     if (_num_of_elements > 256 * 1024 * 1024)
+//     {
+//         #if _ENABLE_ERROR_MESSAGES == 1
+//         printf ("size error: too large array size \n");
+//         printf ("exiting function-> _gen_random_int_array (int): \n");
+//         printf ("return: (NULL) \n");
+//         #endif
+//         return NULL;
+//     }
+//     #endif
+//     int *_return_ptr;
+//     // #RESERVING SPACE IN THE HEAP:-
+//     _return_ptr = (int *) (malloc (_num_of_elements * sizeof (int)));
+//     #if _ENABLE_ERROR_DETECTION == 1
+//     if (_return_ptr == NULL)
+//     {
+//         #if _ENABLE_ERROR_MESSAGES == 1
+//         printf ("malloc error: malloc () function returned NULL pointer\n");
+//         #endif
+//         return NULL;
+//     }
+//     #endif
+//     // #END;
+//     // #PLACING RANDOM NUMBERS INSIDE THE ARRAY
+//     srand ((unsigned int) (time (NULL)));
+//     for (int i = 0; i < _num_of_elements; i++)
+//     {
+//         _return_ptr[i] = (rand () * rand ()) % maxval;
+//     }
+//     // #END
+    
+//     #if _ENABLE_DEBUGGING_LITE == 1
+//     printf ("exiting function-> _gen_random_int_array (int): \n");
+//     printf ("\'_return_ptr\': 0x%x \n", _return_ptr);
+//     #endif
+//     return _return_ptr;
+// }
+int *_gen_random_unique_int_array_with_maxval (int _num_of_elements, int maxval) //minval = 0;
+{
+    #if _ENABLE_DEBUGGING_LITE == 1
+    printf ("called function-> _gen_random_unique_int_array_with_maxval (int, int, int): \n");
+    printf ("\'_num_of_elements\': %d \n", _num_of_elements);
+    printf ("\'maxval\': %d \n", maxval);
+    #endif
+    #if _ENABLE_ERROR_DETECTION == 1
+    if (_num_of_elements > 256 * 1024 * 1024)
+    {
+        #if _ENABLE_ERROR_MESSAGES == 1
+        printf ("size error: too large array size \n");
+        printf ("exiting function-> _gen_random_int_array (int): \n");
+        printf ("return: (NULL) \n");
+        #endif
+        return NULL;
+    }
+    if ((_num_of_elements - 1) > maxval)
+    {
+        #if _ENABLE_ERROR_MESSAGES == 1
+        printf ("function input error: not possible to generate a random array of length %d with maxval %d \n", _num_of_elements, maxval);
+        printf ("exiting function-> _gen_random_int_array (int): \n");
+        printf ("return: (NULL) \n");
+        #endif
+        return NULL;
+    }
+    #endif
+    int *_return_ptr;
+    // #RESERVING SPACE IN THE HEAP:-
+    // std::cout << "sizeof int = " << sizeof (int) << std::endl;
+_memory_allocation_:
+    _return_ptr = (int *) (malloc ((unsigned long long) (_num_of_elements * sizeof (int))));
+    // std::cout << "hello!" << std::endl;
+    #if _ALLOCATED_MEMORY_CHECK == 1
+    if (_return_ptr == NULL)
+    {
+        printf ("memory allocation error: malloc returned null! \n");
+        printf ("trying  to allocate memory again! \n");
+        goto _memory_allocation_;
+    }
+    #endif
+    printf ("_gen_random_unique_int_array_with_maxval :: CheckFlag->1 \n");
+    // #END;
+    // #PLACING RANDOM NUMBERS INSIDE THE ARRAY
+    srand ((unsigned int) (time (NULL)));
+    int _random_generated_int;
+    int _number_of_failed_attempts = 0;
+    for (int i = 0; i < _num_of_elements; i++)
+    {
+        _random_generated_int = (rand () * rand ()) % (maxval + 1);
+        for (int j = 0; j < i; j++)
+        {
+            if (_return_ptr[j] == _random_generated_int)
+            {
+                _random_generated_int = -1;
+                break;
+            }
+        }
+        if (_random_generated_int == -1)
+        {
+            //discard the random value;
+            _number_of_failed_attempts++;
+            // #if _SHOW_NUMBER_OF_FAILED_ATTEMPTS == 1
+            // if ((_number_of_failed_attempts % 1000) == 0)
+            // {
+            //     printf ("number of failed attempts = %d; array length: %d \n", _number_of_failed_attempts, i);
+            // }
+            // #endif
+            i--;
+            continue;
+        }
+        else
+        {
+            _return_ptr[i] = _random_generated_int;
+        }
+    }
+    // #END
+    #if _SHOW_NUMBER_OF_FAILED_ATTEMPTS == 1
+    printf ("total number of failed attempts: %d \n", _number_of_failed_attempts);
+    #endif
+    #if _ENABLE_DEBUGGING_LITE == 1
+    printf ("exiting function-> _gen_random_unique_int_array_with_maxval (int, int, int) \n");
+    printf ("\'_return_ptr\': 0x%x \n", _return_ptr);
+    #endif
+    return _return_ptr;
+}
+#endif
